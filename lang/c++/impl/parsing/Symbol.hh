@@ -24,9 +24,9 @@
 #include <set>
 #include <stack>
 #include <sstream>
+#include <tuple>
 
 #include <boost/any.hpp>
-#include <boost/tuple/tuple.hpp>
 
 #include "Node.hh"
 #include "Decoder.hh"
@@ -39,8 +39,8 @@ class Symbol;
 
 typedef std::vector<Symbol> Production;
 typedef std::shared_ptr<Production> ProductionPtr;
-typedef boost::tuple<std::stack<ssize_t>, bool, ProductionPtr, ProductionPtr> RepeaterInfo;
-typedef boost::tuple<ProductionPtr, ProductionPtr> RootInfo;
+typedef std::tuple<std::stack<ssize_t>, bool, ProductionPtr, ProductionPtr> RepeaterInfo;
+typedef std::tuple<ProductionPtr, ProductionPtr> RootInfo;
 
 class Symbol {
 public:
@@ -217,7 +217,7 @@ public:
     {
         return Symbol(sDefaultStart, bb);
     }
- 
+
     static Symbol defaultEndAction()
     {
         return Symbol(sDefaultEnd);
@@ -308,7 +308,7 @@ void fixup(const ProductionPtr& p,
         fixup(*it, m, seen);
     }
 }
-    
+
 
 /**
  * Recursively replaces all placeholders in the symbol with the values with the
@@ -348,8 +348,8 @@ void fixup(Symbol& s, const std::map<T, ProductionPtr> &m,
     case Symbol::sRepeater:
         {
             const RepeaterInfo& ri = *s.extrap<RepeaterInfo>();
-            fixup_internal(boost::tuples::get<2>(ri), m, seen);
-            fixup_internal(boost::tuples::get<3>(ri), m, seen);
+            fixup_internal(std::get<2>(ri), m, seen);
+            fixup_internal(std::get<3>(ri), m, seen);
         }
         break;
     case Symbol::sPlaceholder:
@@ -431,7 +431,7 @@ public:
             } else {
                 switch (s.kind()) {
                 case Symbol::sRoot:
-                    append(boost::tuples::get<0>(*s.extrap<RootInfo>()));
+                    append(std::get<0>(*s.extrap<RootInfo>()));
                     continue;
                 case Symbol::sIndirect:
                     {
@@ -452,7 +452,7 @@ public:
                 case Symbol::sRepeater:
                     {
                         RepeaterInfo *p = s.extrap<RepeaterInfo>();
-                        std::stack<ssize_t>& ns = boost::tuples::get<0>(*p);
+                        std::stack<ssize_t>& ns = std::get<0>(*p);
                         if (ns.empty()) {
                             throw Exception(
                                 "Empty item count stack in repeater advance");
@@ -462,7 +462,7 @@ public:
                                 "Zero item count in repeater advance");
                         }
                         --ns.top();
-                        append(boost::tuples::get<2>(*p));
+                        append(std::get<2>(*p));
                     }
                     continue;
                 case Symbol::sError:
@@ -485,7 +485,7 @@ public:
                         size_t n = handler_.handle(s);
                         if (s.kind() == Symbol::sWriterUnion) {
                             parsingStack.pop();
-                            selectBranch(n); 
+                            selectBranch(n);
                         } else {
                             parsingStack.pop();
                         }
@@ -544,7 +544,7 @@ public:
                     }
                     Symbol& t = parsingStack.top();
                     RepeaterInfo *p = t.extrap<RepeaterInfo>();
-                    boost::tuples::get<0>(*p).push(n);
+                    std::get<0>(*p).push(n);
                     continue;
                 }
             case Symbol::sArrayEnd:
@@ -560,7 +560,7 @@ public:
                     }
                     Symbol& t = parsingStack.top();
                     RepeaterInfo *p = t.extrap<RepeaterInfo>();
-                    boost::tuples::get<0>(*p).push(n);
+                    std::get<0>(*p).push(n);
                     continue;
                 }
             case Symbol::sMapEnd:
@@ -586,19 +586,19 @@ public:
             case Symbol::sRepeater:
                 {
                     RepeaterInfo *p = t.extrap<RepeaterInfo>();
-                    std::stack<ssize_t>& ns = boost::tuples::get<0>(*p);
+                    std::stack<ssize_t>& ns = std::get<0>(*p);
                     if (ns.empty()) {
                         throw Exception(
                             "Empty item count stack in repeater skip");
                     }
                     ssize_t& n = ns.top();
                     if (n == 0) {
-                        n = boost::tuples::get<1>(*p) ? d.arrayNext()
+                        n = std::get<1>(*p) ? d.arrayNext()
                                                       : d.mapNext();
                     }
                     if (n != 0) {
                         --n;
-                        append(boost::tuples::get<3>(*p));
+                        append(std::get<3>(*p));
                         continue;
                     } else {
                         ns.pop();
@@ -707,7 +707,7 @@ public:
         Symbol& s = parsingStack.top();
         assertMatch(Symbol::sRepeater, s.kind());
         RepeaterInfo *p = s.extrap<RepeaterInfo>();
-        std::stack<ssize_t> &nn = boost::tuples::get<0>(*p);
+        std::stack<ssize_t> &nn = std::get<0>(*p);
         nn.push(n);
     }
 
@@ -716,7 +716,7 @@ public:
         Symbol& s = parsingStack.top();
         assertMatch(Symbol::sRepeater, s.kind());
         RepeaterInfo *p = s.extrap<RepeaterInfo>();
-        std::stack<ssize_t> &nn = boost::tuples::get<0>(*p);
+        std::stack<ssize_t> &nn = std::get<0>(*p);
         if (nn.empty() || nn.top() != 0) {
           throw Exception("Wrong number of items");
         }
@@ -728,7 +728,7 @@ public:
         Symbol& s = parsingStack.top();
         assertMatch(Symbol::sRepeater, s.kind());
         RepeaterInfo *p = s.extrap<RepeaterInfo>();
-        std::stack<ssize_t> &ns = boost::tuples::get<0>(*p);
+        std::stack<ssize_t> &ns = std::get<0>(*p);
         if (ns.empty()) {
             throw Exception("Incorrect number of items (empty)");
         }
@@ -812,8 +812,8 @@ inline std::ostream& operator<<(std::ostream& os, const Symbol s)
             {
                 const RepeaterInfo& ri = *s.extrap<RepeaterInfo>();
                 os << '(' << Symbol::toString(s.kind())
-                   << ' ' << *boost::tuples::get<2>(ri)
-                   << ' ' << *boost::tuples::get<3>(ri)
+                   << ' ' << *std::get<2>(ri)
+                   << ' ' << *std::get<3>(ri)
                    << ')';
             }
             break;

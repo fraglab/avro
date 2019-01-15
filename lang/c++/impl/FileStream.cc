@@ -107,7 +107,7 @@ struct FileBufferCopyIn : public BufferCopyIn {
         return false;
     }
 #endif
-  
+
 };
 
 struct IStreamBufferCopyIn : public BufferCopyIn {
@@ -212,8 +212,8 @@ class BufferCopyInInputStream : public SeekableInputStream {
     void seek(int64_t position) {
       // BufferCopyIn::seek is relative to byteCount_, whereas position is
       // absolute.
-      in_->seek(position - byteCount_ - available_);
-      byteCount_ = position;
+      in_->seek(static_cast<size_t>(position - byteCount_ - available_));
+      byteCount_ = static_cast<size_t>(position);
       available_ = 0;
     }
 
@@ -284,7 +284,7 @@ struct FileBufferCopyOut : public BufferCopyOut {
         }
     }
 #endif
-  
+
 };
 
 struct OStreamBufferCopyOut : public BufferCopyOut {

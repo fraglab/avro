@@ -23,7 +23,6 @@
 #include <algorithm>
 #include <ctype.h>
 #include <memory>
-#include <boost/math/special_functions/fpclassify.hpp>
 
 #include "ValidatingCodec.hh"
 #include "Symbol.hh"
@@ -574,7 +573,7 @@ void JsonEncoder<P, F>::encodeFloat(float f)
         out_.encodeString("Infinity");
     } else if (f == -std::numeric_limits<float>::infinity()) {
         out_.encodeString("-Infinity");
-    } else if (boost::math::isnan(f)) {
+    } else if (std::isnan(f)) {
         out_.encodeString("NaN");
     } else {
         out_.encodeNumber(f);
@@ -589,7 +588,7 @@ void JsonEncoder<P, F>::encodeDouble(double d)
         out_.encodeString("Infinity");
     } else if (d == -std::numeric_limits<double>::infinity()) {
         out_.encodeString("-Infinity");
-    } else if (boost::math::isnan(d)) {
+    } else if (std::isnan(d)) {
         out_.encodeString("NaN");
     } else {
         out_.encodeNumber(d);

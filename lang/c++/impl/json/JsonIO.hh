@@ -23,9 +23,6 @@
 #include <stack>
 #include <string>
 #include <sstream>
-#include <boost/math/special_functions/fpclassify.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/utility.hpp>
 
 #include "Config.hh"
 #include "Stream.hh"
@@ -389,7 +386,7 @@ public:
     void encodeNumber(T t) {
         sep();
         std::ostringstream oss;
-        oss << boost::lexical_cast<std::string>(t);
+        oss << std::to_string(t);
         const std::string& s = oss.str();
         out_.writeBytes(reinterpret_cast<const uint8_t*>(s.data()), s.size());
         sep2();
@@ -398,9 +395,9 @@ public:
     void encodeNumber(double t) {
         sep();
         std::ostringstream oss;
-        if (boost::math::isfinite(t)) {
-            oss << boost::lexical_cast<std::string>(t);
-        } else if (boost::math::isnan(t)) {
+        if (std::isfinite(t)) {
+            oss << std::to_string(t);
+        } else if (std::isnan(t)) {
             oss << "NaN";
         } else if (t == std::numeric_limits<double>::infinity()) {
             oss << "Infinity";

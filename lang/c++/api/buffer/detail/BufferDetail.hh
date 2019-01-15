@@ -19,19 +19,15 @@
 #ifndef avro_BufferDetail_hh__
 #define avro_BufferDetail_hh__
 
-#include <boost/shared_ptr.hpp>
-#include <boost/shared_array.hpp>
-#include <boost/static_assert.hpp>
-#include <boost/function.hpp>
-#include <boost/utility.hpp>
 #ifdef HAVE_BOOST_ASIO
 #include <boost/asio/buffer.hpp>
 #endif
+
 #include <exception>
 #include <cassert>
 #include <deque>
 
-/** 
+/**
  * \file BufferDetail.hh
  *
  * \brief The implementation details for the Buffer class.
@@ -49,12 +45,12 @@ typedef boost::asio::const_buffer   ConstAsioBuffer;
 typedef boost::asio::mutable_buffer MutableAsioBuffer;
 #endif
 
-/// The size in bytes for blocks backing buffer chunks. 
+/// The size in bytes for blocks backing buffer chunks.
 const size_type kMinBlockSize = 4096;
 const size_type kMaxBlockSize = 16384;
 const size_type kDefaultBlockSize = kMinBlockSize;
 
-typedef boost::function<void(void)>  free_func;
+typedef std::function<void(void)>  free_func;
 
 /**
  * Simple class to hold a functor that executes on delete
@@ -72,7 +68,7 @@ class CallOnDestroy {
     free_func func_;
 };
 
-/** 
+/**
  * \brief A chunk is the building block for buffers.
  *
  * A chunk is backed by a memory block, and internally it maintains information
@@ -89,16 +85,16 @@ class CallOnDestroy {
  *
  **/
 
-class Chunk 
+class Chunk
 {
 
   public:
 
-    typedef boost::shared_ptr<Chunk> SharedPtr;
+    typedef std::shared_ptr<Chunk> SharedPtr;
 
     /// Default constructor, allocates a new underlying block for this chunk.
     Chunk(size_type size) :
-        underlyingBlock_(new data_type[size]), 
+        underlyingBlock_(new data_type[size], std::default_delete<data_type[]>()),
         readPos_(underlyingBlock_.get()),
         writePos_(readPos_),
         endPos_(readPos_ + size)
@@ -115,7 +111,7 @@ class Chunk
 
   private:
     // reference counted object will call a functor when it's destroyed
-    boost::shared_ptr<CallOnDestroy> callOnDestroy_;
+    std::shared_ptr<CallOnDestroy> callOnDestroy_;
 
   public:
 
@@ -145,7 +141,7 @@ class Chunk
 
     /// After a write operation, increment the write position.
     void incrementCursor(size_type howMuch) {
-        writePos_  += howMuch; 
+        writePos_  += howMuch;
         assert(writePos_ <= endPos_);
     }
 
@@ -170,9 +166,9 @@ class Chunk
     friend bool operator!=(const Chunk &lhs, const Chunk &rhs);
 
     // more than one buffer can share an underlying block, so use SharedPtr
-    boost::shared_array<data_type> underlyingBlock_;
+    std::shared_ptr<data_type> underlyingBlock_;
 
-    data_type *readPos_;  ///< The first readable byte in the block 
+    data_type *readPos_;  ///< The first readable byte in the block
     data_type *writePos_; ///< The end of written data and start of free space
     data_type *endPos_;   ///< Marks the end of the usable block area
 };
@@ -181,18 +177,18 @@ class Chunk
  * Compare underlying buffers and return true if they are equal
  **/
 inline bool operator==(const Chunk &lhs, const Chunk &rhs) {
-    return lhs.underlyingBlock_ == rhs.underlyingBlock_;
+    return lhs.underlyingBlock_.get() == rhs.underlyingBlock_.get();
 }
 
 /**
  * Compare underlying buffers and return true if they are unequal
  **/
 inline bool operator!=(const Chunk &lhs, const Chunk &rhs) {
-    return lhs.underlyingBlock_ != rhs.underlyingBlock_;
+    return lhs.underlyingBlock_.get() != rhs.underlyingBlock_.get();
 }
 
 
-/** 
+/**
  * \brief Implementation details for Buffer class
  *
  * Internally, BufferImpl keeps two lists of chunks, one list consists entirely of
@@ -206,7 +202,7 @@ class BufferImpl : boost::noncopyable
 
     /// Add a new chunk to the list of chunks for this buffer, growing the
     /// buffer by the default block size.
-    void allocChunkChecked(size_type size = kDefaultBlockSize) 
+    void allocChunkChecked(size_type size = kDefaultBlockSize)
     {
         writeChunks_.push_back(Chunk(size));
         freeSpace_ += writeChunks_.back().freeSize();
@@ -215,7 +211,7 @@ class BufferImpl : boost::noncopyable
     /// Add a new chunk to the list of chunks for this buffer, growing the
     /// buffer by the requested size, but within the range of a minimum and
     /// maximum.
-    void allocChunk(size_type size) 
+    void allocChunk(size_type size)
     {
         if(size < kMinBlockSize) {
             size = kMinBlockSize;
@@ -228,20 +224,20 @@ class BufferImpl : boost::noncopyable
 
     /// Update the state of the chunks after a write operation.  This function
     /// ensures the chunk states are consistent with the write.
-    void postWrite(size_type size) 
+    void postWrite(size_type size)
     {
 
         // precondition to this function is that the writeChunk_.front()
         // contains the data that was just written, so make sure writeChunks_
         // is not empty:
-        
+
         assert(size <= freeSpace_ && !writeChunks_.empty());
 
         // This is probably the one tricky part of BufferImpl.  The data that
         // was written now exists in writeChunks_.front().  Now we must make
         // sure that same data exists in readChunks_.back().
         //
-        // There are two cases: 
+        // There are two cases:
         //
         // 1. readChunks_.last() and writeChunk_.front() refer to the same
         // underlying block, in which case they both just need their cursor
@@ -256,7 +252,7 @@ class BufferImpl : boost::noncopyable
 
         // if readChunks_ is not the same as writeChunks_.front(), make a copy
         // of it there
-        
+
         if(readChunks_.empty() || (readChunks_.back() != writeChunks_.front())) {
             const Chunk &curChunk = writeChunks_.front();
             readChunks_.push_back(curChunk);
@@ -265,7 +261,7 @@ class BufferImpl : boost::noncopyable
             // belong to this buffer (otherwise it would have already been
             // added to the readChunk_ list).  Here, adjust the start of the
             // readChunk to begin after any data already existing in curChunk
-            
+
             readChunks_.back().truncateFront( curChunk.dataSize());
         }
 
@@ -273,7 +269,7 @@ class BufferImpl : boost::noncopyable
 
         // update the states of both readChunks_ and writeChunks_ to indicate that they are
         // holding the new data
-        
+
         readChunks_.back().incrementCursor(size);
         writeChunks_.front().incrementCursor(size);
         size_ += size;
@@ -281,7 +277,7 @@ class BufferImpl : boost::noncopyable
 
         // if there is no more free space in writeChunks_, the next write cannot use
         // it, so dispose of it now
-        
+
         if(writeChunks_.front().freeSize() == 0) {
             writeChunks_.pop_front();
         }
@@ -290,8 +286,8 @@ class BufferImpl : boost::noncopyable
   public:
 
     typedef std::deque<Chunk> ChunkList;
-    typedef boost::shared_ptr<BufferImpl> SharedPtr;
-    typedef boost::shared_ptr<const BufferImpl> ConstSharedPtr;
+    typedef std::shared_ptr<BufferImpl> SharedPtr;
+    typedef std::shared_ptr<const BufferImpl> ConstSharedPtr;
 
     /// Default constructor, creates a buffer without any chunks
     BufferImpl() :
@@ -301,7 +297,7 @@ class BufferImpl : boost::noncopyable
 
     /// Copy constructor, gets a copy of all the chunks with data.
     explicit BufferImpl(const BufferImpl &src) :
-        readChunks_(src.readChunks_), 
+        readChunks_(src.readChunks_),
         freeSpace_(0),
         size_(src.size_)
     { }
@@ -328,7 +324,7 @@ class BufferImpl : boost::noncopyable
     ChunkList::const_iterator beginRead() const {
         return readChunks_.begin();
     }
-    
+
     /// Return the chunk avro's end iterator for reading.
     ChunkList::const_iterator endRead() const {
         return readChunks_.end();
@@ -338,7 +334,7 @@ class BufferImpl : boost::noncopyable
     ChunkList::const_iterator beginWrite() const {
         return writeChunks_.begin();
     }
-    
+
     /// Return the chunk avro's end iterator for writing.
     ChunkList::const_iterator endWrite() const {
         return writeChunks_.end();
@@ -355,7 +351,7 @@ class BufferImpl : boost::noncopyable
             postWrite(sizeof(T));
         }
         else {
-            // need to fixup chunks first, so use the regular memcpy 
+            // need to fixup chunks first, so use the regular memcpy
             // writeTo method
             writeTo(reinterpret_cast<data_type*>(&val), sizeof(T));
         }
@@ -364,15 +360,15 @@ class BufferImpl : boost::noncopyable
     /// An uninstantiable function, this is if boost::is_fundamental check fails,
     /// and will compile-time assert.
     template<typename T>
-    void writeTo(T val, const std::false_type&) 
+    void writeTo(T val, const std::false_type&)
     {
-        BOOST_STATIC_ASSERT(sizeof(T)==0);
+        static_assert(sizeof(T)==0);
     }
 
     /// Write a block of data to the buffer, adding new chunks if necessary.
-    size_type writeTo(const data_type *data, size_type size) 
+    size_type writeTo(const data_type *data, size_type size)
     {
-        size_type bytesLeft = size; 
+        size_type bytesLeft = size;
         while(bytesLeft) {
 
             if(freeSpace_ == 0) {
@@ -384,14 +380,14 @@ class BufferImpl : boost::noncopyable
             assert(toCopy);
             memcpy(chunk.tellWritePos(), data, toCopy);
             postWrite(toCopy);
-            data      += toCopy; 
-            bytesLeft -= toCopy; 
+            data      += toCopy;
+            bytesLeft -= toCopy;
         }
         return size;
     }
 
     /// Update internal status of chunks after data is written using iterator.
-    size_type wroteTo(size_type size) 
+    size_type wroteTo(size_type size)
     {
         assert(size <= freeSpace_);
         size_type bytesLeft = size;
@@ -425,7 +421,7 @@ class BufferImpl : boost::noncopyable
 
         size_type bytesToDiscard = bytes;
         while( bytesToDiscard ) {
-          
+
             size_t currentSize = readChunks_.front().dataSize();
 
             // see if entire chunk is discarded
@@ -450,11 +446,11 @@ class BufferImpl : boost::noncopyable
 
         size_type bytesToExtract = bytes;
         while( bytesToExtract ) {
-          
+
             size_t currentSize = readChunks_.front().dataSize();
             dest.readChunks_.push_back(readChunks_.front());
 
-            // see if entire chunk was extracted 
+            // see if entire chunk was extracted
             if(currentSize <= bytesToExtract) {
                 readChunks_.pop_front();
                 bytesToExtract -= currentSize;
@@ -472,7 +468,7 @@ class BufferImpl : boost::noncopyable
     }
 
     /// Move data from this to the destination, leaving this buffer without data
-    void extractData(BufferImpl &dest) 
+    void extractData(BufferImpl &dest)
     {
         assert(dest.readChunks_.empty());
         dest.readChunks_.swap(readChunks_);
@@ -482,25 +478,25 @@ class BufferImpl : boost::noncopyable
 
     /// Copy data to a different buffer by copying the chunks.  It's
     /// a bit like extract, but without modifying the source buffer.
-    void copyData(BufferImpl &dest, 
+    void copyData(BufferImpl &dest,
                   ChunkList::const_iterator iter,
-                  size_type offset, 
+                  size_type offset,
                   size_type bytes) const
     {
         // now we are positioned to start the copying, copy as many
-        // chunks as we need, the first chunk may have a non-zero offset 
-        // if the data to copy is not at the start of the chunk 
+        // chunks as we need, the first chunk may have a non-zero offset
+        // if the data to copy is not at the start of the chunk
         size_type copied = 0;
         while(copied < bytes) {
 
             dest.readChunks_.push_back(*iter);
 
-            // offset only applies in the first chunk, 
+            // offset only applies in the first chunk,
             // all subsequent chunks are copied from the start
             dest.readChunks_.back().truncateFront(offset);
             offset = 0;
 
-            copied += dest.readChunks_.back().dataSize(); 
+            copied += dest.readChunks_.back().dataSize();
             ++iter;
         }
 

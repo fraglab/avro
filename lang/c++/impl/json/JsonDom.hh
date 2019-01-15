@@ -26,7 +26,8 @@
 #include <vector>
 #include <memory>
 
-#include "boost/any.hpp"
+#include <boost/any.hpp>
+
 #include "Config.hh"
 
 namespace avro {
@@ -35,14 +36,14 @@ class AVRO_DECL InputStream;
 
 namespace json {
 class Entity;
-    
+
 typedef bool Bool;
 typedef int64_t Long;
 typedef double Double;
 typedef std::string String;
 typedef std::vector<Entity> Array;
 typedef std::map<std::string, Entity> Object;
-    
+
 class AVRO_DECL JsonParser;
 class JsonNullFormatter;
 
@@ -75,7 +76,7 @@ public:
     Entity(const std::shared_ptr<String>& v, size_t line = 0) : type_(etString), value_(v), line_(line) { }
     Entity(const std::shared_ptr<Array>& v, size_t line = 0) : type_(etArray), value_(v), line_(line) { }
     Entity(const std::shared_ptr<Object>& v, size_t line = 0) : type_(etObject), value_(v), line_(line) { }
-    
+
     EntityType type() const { return type_; }
 
     size_t line() const { return line_; }
@@ -89,7 +90,7 @@ public:
         ensureType(etLong);
         return boost::any_cast<Long>(value_);
     }
-    
+
     Double doubleValue() const {
         ensureType(etDouble);
         return boost::any_cast<Double>(value_);
@@ -98,7 +99,7 @@ public:
     String stringValue() const;
 
     String bytesValue() const;
-    
+
     const Array& arrayValue() const {
         ensureType(etArray);
         return **boost::any_cast<std::shared_ptr<Array> >(&value_);
@@ -130,7 +131,7 @@ template <> struct type_traits<double> {
     static EntityType type() { return etDouble; }
     static const char* name() { return "double"; }
 };
-    
+
 template <> struct type_traits<std::string> {
     static EntityType type() { return etString; }
     static const char* name() { return "string"; }

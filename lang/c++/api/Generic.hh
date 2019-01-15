@@ -19,8 +19,6 @@
 #ifndef avro_Generic_hh__
 #define avro_Generic_hh__
 
-#include <boost/utility.hpp>
-
 #include "Config.hh"
 #include "Types.hh"
 #include "Encoder.hh"
@@ -143,7 +141,7 @@ template <> struct codec_traits<GenericDatum> {
         GenericReader::read(d, g);
     }
 };
-    
+
 }   // namespace avro
 #endif
 

@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <boost/algorithm/string/replace.hpp>
 #include <sstream>
 
 #include "Compiler.hh"
@@ -155,7 +154,15 @@ const int64_t getLongField(const Entity& e, const Object& m,
 // Unescape double quotes (") for de-serialization.  This method complements the
 // method NodeImpl::escape() which is used for serialization.
 static void unescape(string& s) {
-    boost::replace_all(s, "\\\"", "\"");
+    string search = "\\\"";
+    string replace = "\"";
+    size_t pos = 0;
+
+    while ((pos = s.find(search, pos)) != string::npos)
+    {
+        s.replace(pos, search.length(), replace);
+        pos += replace.length();
+    }
 }
 
 const string getDocField(const Entity& e, const Object& m)
@@ -288,7 +295,6 @@ static GenericDatum makeGenericDatum(NodePtr n,
     default:
         throw Exception(boost::format("Unknown type: %1%") % t);
     }
-    return GenericDatum();
 }
 
 
@@ -343,11 +349,11 @@ static LogicalType makeLogicalType(const Entity& e, const Object& m) {
     if (typeField == "decimal") {
         LogicalType decimalType(LogicalType::DECIMAL);
         try {
-            decimalType.setPrecision(getLongField(e, m, "precision"));
+            decimalType.setPrecision(static_cast<int>(getLongField(e, m, "precision")));
             if (containsField(m, "scale")) {
-                decimalType.setScale(getLongField(e, m, "scale"));
+                decimalType.setScale(static_cast<int>(getLongField(e, m, "scale")));
             }
-        } catch (Exception& ex) {
+        } catch (Exception&) {
             // If any part of the logical type is malformed, per the standard we
             // must ignore the whole attribute.
             return LogicalType(LogicalType::NONE);
@@ -493,7 +499,7 @@ static NodePtr makeNode(const Entity& e, const Object& m,
     if (result) {
         try {
             result->setLogicalType(makeLogicalType(e, m));
-        } catch (Exception& ex) {
+        } catch (Exception&) {
             // Per the standard we must ignore the logical type attribute if it
             // is malformed.
         }

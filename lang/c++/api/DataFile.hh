@@ -30,9 +30,9 @@
 #include <string>
 #include <vector>
 
+#include <zstr.hpp>
+
 #include "array"
-#include "boost/utility.hpp"
-#include <boost/iostreams/filtering_stream.hpp>
 
 namespace avro {
 
@@ -190,7 +190,7 @@ class AVRO_DECL DataFileReaderBase : boost::noncopyable {
     Codec codec_;
     int64_t blockStart_;
     int64_t blockEnd_;
-    
+
     ValidSchema readerSchema_;
     ValidSchema dataSchema_;
     DecoderPtr dataDecoder_;
@@ -201,8 +201,8 @@ class AVRO_DECL DataFileReaderBase : boost::noncopyable {
     DataFileSync sync_;
 
     // for compressed buffer
-    std::unique_ptr<boost::iostreams::filtering_istream> os_;
-    std::vector<char> compressed_;
+    std::unique_ptr<zstr::istream> os_;
+    std::stringstream compressed_;
     std::string uncompressed;
     void readHeader();
 

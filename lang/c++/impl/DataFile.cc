@@ -21,11 +21,8 @@
 #include "Exception.hh"
 
 #include <sstream>
+#include <random>
 
-#include <boost/random/mersenne_twister.hpp>
-#include <boost/iostreams/device/file.hpp>
-#include <boost/iostreams/filter/gzip.hpp>
-#include <boost/iostreams/filter/zlib.hpp>
 #include <boost/crc.hpp>  // for boost::crc_32_type
 
 #ifdef SNAPPY_CODEC_AVAILABLE
@@ -54,13 +51,6 @@ const string AVRO_SNAPPY_CODEC = "snappy";
 
 const size_t minSyncInterval = 32;
 const size_t maxSyncInterval = 1u << 30;
-
-boost::iostreams::zlib_params get_zlib_params() {
-  boost::iostreams::zlib_params ret;
-  ret.method = boost::iostreams::zlib::deflated;
-  ret.noheader = true;
-  return ret;
-}
 }
 
 DataFileWriterBase::DataFileWriterBase(const char* filename, const ValidSchema& schema, size_t syncInterval,
@@ -145,17 +135,18 @@ void DataFileWriterBase::sync()
         std::unique_ptr<InputStream> in = memoryInputStream(*buffer_);
         copy(*in, *stream_);
     } else if (codec_ == DEFLATE_CODEC) {
-        std::vector<char> buf;
+        string buf;
         {
-            boost::iostreams::filtering_ostream os;
-            os.push(boost::iostreams::zlib_compressor(get_zlib_params()));
-            os.push(boost::iostreams::back_inserter(buf));
+            std::ostringstream ss(buf);
+            zstr::ostream os(ss);
+
             const uint8_t* data;
             size_t len;
 
             std::unique_ptr<InputStream> input = memoryInputStream(*buffer_);
+
             while (input->next(&data, &len)) {
-                boost::iostreams::write(os, reinterpret_cast<const char*>(data), len);
+                os.write(reinterpret_cast<const char*>(data), len);
             }
         } // make sure all is flushed
         std::unique_ptr<InputStream> in = memoryInputStream(
@@ -233,7 +224,7 @@ void DataFileWriterBase::flush()
     sync();
 }
 
-boost::mt19937 random(static_cast<uint32_t>(time(0)));
+std::mt19937 random(static_cast<uint32_t>(time(0)));
 
 DataFileSync DataFileWriterBase::makeSync()
 {
@@ -439,18 +430,17 @@ void DataFileReaderBase::readDataBlock()
         dataStream_ = std::move(in);
 #endif
     } else {
-        compressed_.clear();
+        compressed_.str(string());
         const uint8_t* data;
         size_t len;
         while (st->next(&data, &len)) {
-            compressed_.insert(compressed_.end(), data, data + len);
+            compressed_.write(reinterpret_cast<const char*>(data), len);
         }
-        // boost::iostreams::write(os, reinterpret_cast<const char*>(data), len);
-        os_.reset(new boost::iostreams::filtering_istream());
-        os_->push(boost::iostreams::zlib_decompressor(get_zlib_params()));
-        os_->push(boost::iostreams::basic_array_source<char>(
-                                                             compressed_.data(), compressed_.size()));
-        
+
+        compressed_.seekg(0, std::ios::beg);
+
+        os_.reset(new zstr::istream(compressed_));
+
         std::unique_ptr<InputStream> in = nonSeekableIstreamInputStream(*os_);
         dataDecoder_->init(*in);
         dataStream_ = std::move(in);

@@ -19,7 +19,6 @@
 
 #include <sstream>
 #include <iomanip>
-#include <boost/algorithm/string/replace.hpp>
 #include "NodeImpl.hh"
 
 
