@@ -17,3 +17,7 @@ test-output
 /lang/java/compiler/nb-configuration.xml
 /lang/java/compiler/nbproject/
 **/.vscode/**/*
+
+lang/c\+\+/build\.win/
+
+lang/c\+\+/zstr/

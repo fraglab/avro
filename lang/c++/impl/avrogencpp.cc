@@ -290,6 +290,14 @@ string CodeGen::generateRecordType(const NodePtr& n)
         os_ << "\n";
     }
     os_ << "        { }\n";
+    os_ << "\n";
+    os_ << "    static const char* getModelName() {\n";
+    os_ << "        return m_rawModelName;\n";
+    os_ << "    }\n";
+    os_ << "\n";
+    os_ << "private:\n";
+    os_ << "    static constexpr const char* m_rawModelName = \"" << decoratedName << "\";\n";
+    os_ << "\n";
     os_ << "};\n\n";
     return decoratedName;
 }
