@@ -91,7 +91,7 @@ Symbol Symbol::enumAdjustSymbol(const NodePtr& writer, const NodePtr& reader)
             adj.push_back(-pos);
             err.push_back(s);
         } else {
-            adj.push_back(it - rs.begin());
+            adj.push_back(static_cast<int>(it - rs.begin()));
         }
     }
     return Symbol(sEnumAdjust, make_pair(adj, err));

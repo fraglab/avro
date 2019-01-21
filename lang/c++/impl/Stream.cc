@@ -170,7 +170,7 @@ std::unique_ptr<InputStream> memoryInputStream(const uint8_t* data, size_t len)
 std::unique_ptr<InputStream> memoryInputStream(const OutputStream& source)
 {
     const MemoryOutputStream& mos =
-        dynamic_cast<const MemoryOutputStream&>(source);
+        static_cast<const MemoryOutputStream&>(source);
     return (mos.data_.empty()) ?
         std::unique_ptr<InputStream>(new MemoryInputStream2(0, 0)) :
         std::unique_ptr<InputStream>(new MemoryInputStream(mos.data_,
@@ -181,7 +181,7 @@ std::unique_ptr<InputStream> memoryInputStream(const OutputStream& source)
 std::shared_ptr<std::vector<uint8_t> > snapshot(const OutputStream& source)
 {
     const MemoryOutputStream& mos =
-        dynamic_cast<const MemoryOutputStream&>(source);
+        static_cast<const MemoryOutputStream&>(source);
     std::shared_ptr<std::vector<uint8_t> > result(new std::vector<uint8_t>());
     size_t c = mos.byteCount_;
     result->reserve(mos.byteCount_);

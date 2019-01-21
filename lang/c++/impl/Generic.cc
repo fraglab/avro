@@ -35,7 +35,7 @@ void GenericContainer::assertType(const NodePtr& schema, Type type) {
 }
 
 GenericReader::GenericReader(const ValidSchema& s, const DecoderPtr& decoder) :
-    schema_(s), isResolving_(dynamic_cast<ResolvingDecoder*>(&(*decoder)) != 0),
+    schema_(s), isResolving_(static_cast<ResolvingDecoder*>(&(*decoder)) != 0),
     decoder_(decoder)
 {
 }
@@ -157,7 +157,7 @@ void GenericReader::read(Decoder& d, GenericDatum& g, const ValidSchema& s)
 
 void GenericReader::read(Decoder& d, GenericDatum& g)
 {
-    read(g, d, dynamic_cast<ResolvingDecoder*>(&d) != 0);
+    read(g, d, static_cast<ResolvingDecoder*>(&d) != 0);
 }
 
 GenericWriter::GenericWriter(const ValidSchema& s, const EncoderPtr& encoder) :

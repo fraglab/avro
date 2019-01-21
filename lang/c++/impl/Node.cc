@@ -98,7 +98,7 @@ void Node::setLogicalType(LogicalType logicalType) {
             // Max precision that can be supported by the current size of
             // the FIXED type.
             long maxPrecision =
-                floor(log10(pow(2.0, 8.0 * fixedSize() - 1) - 1));
+                static_cast<long>(floor(log10(pow(2.0, 8.0 * fixedSize() - 1) - 1)));
             if (logicalType.precision() > maxPrecision) {
                 throw Exception(
                     boost::format(

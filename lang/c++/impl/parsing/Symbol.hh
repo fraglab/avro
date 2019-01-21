@@ -542,7 +542,7 @@ public:
                     if (n == 0) {
                         break;
                     }
-                    Symbol& t = parsingStack.top();
+                    t = parsingStack.top();
                     RepeaterInfo *p = t.extrap<RepeaterInfo>();
                     std::get<0>(*p).push(n);
                     continue;
@@ -558,7 +558,7 @@ public:
                     if (n == 0) {
                         break;
                     }
-                    Symbol& t = parsingStack.top();
+                    t = parsingStack.top();
                     RepeaterInfo *p = t.extrap<RepeaterInfo>();
                     std::get<0>(*p).push(n);
                     continue;
@@ -568,7 +568,7 @@ public:
             case Symbol::sFixed:
                 {
                     parsingStack.pop();
-                    Symbol& t = parsingStack.top();
+                    t = parsingStack.top();
                     d.decodeFixed(t.extra<size_t>());
                 }
                 break;

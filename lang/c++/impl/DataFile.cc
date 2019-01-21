@@ -509,7 +509,7 @@ void DataFileReaderBase::readHeader()
 
 void DataFileReaderBase::doSeek(int64_t position)
 {
-    if (SeekableInputStream *ss = dynamic_cast<SeekableInputStream *>(stream_.get())) {
+    if (SeekableInputStream *ss = static_cast<SeekableInputStream *>(stream_.get())) {
         if (!eof_) {
             dataDecoder_->init(*dataStream_);
             drain(*dataStream_);
